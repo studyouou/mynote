@@ -1,0 +1,6 @@
+spring cloud启动一定要加这个包
+
+<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>

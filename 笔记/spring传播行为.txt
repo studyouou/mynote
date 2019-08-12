@@ -1,0 +1,7 @@
+spring 传播在同一个service中不会创建新事物
+Propagation.REQUIRED是如果有事务传递，则使用传递的事务，如果没有，则自己创建一个事务
+propagation.REQUIRES_NEW是如果嵌套存在事务，则上级事务挂起，自己重新开启一个事务。所以和上级不是同一个事务
+    propagation.SUPPORTS上级存在事务则用，不存在则不用。
+    propagation.NOT_SUPPORTED如果上级存在事务，则挂起，自己内部不使用事务
+    propagation.PROPAGATION_NEVER不能使用事务，如果上级使用事务，自己会抛出异常
+    propagation.NESTED也是会启动一个事务，但是如果上级报错回滚，他也是要回滚的

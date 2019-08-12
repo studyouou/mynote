@@ -1,0 +1,8 @@
+在用maven打包时，可以带很多option，比如
+mvn -Pdev 是指定profile
+mvn -Dmaven.test.skip 是指定跳过测试
+mvn -q(-X -e) 是指定日志打印级别 q是只显示错误信息，X是debug级别信息，-e是显示执行错误的详细信息
+mvn -Dxxx=yyy 是指定java全局变量
+
+启动springboot的jar包时，可以带参数指定替换掉application.yml里面的值，如
+java -jar springbootdemo.jar --test.name=xxx就可以替换掉application.yml里的test.name值了

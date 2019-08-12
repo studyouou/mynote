@@ -1,0 +1,2 @@
+当使用ClassLoader来加载文件时，不能加“/”，是以classpath路径为起点
+当使用class.getResource时需要加"/"

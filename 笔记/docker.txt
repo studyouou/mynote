@@ -1,0 +1,19 @@
+docker run --name mysql -p 3306:3306 -e  mysql:5.7
+
+docker mysql 里有个初始化文件夹 只要向里面添加sql文件，就可以在docker启动时就初始化一些表
+
+docker添加国内镜像网址  国外太慢  
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json <<-'EOF'
+{
+  "registry-mirrors": ["https://afcuarar.mirror.aliyuncs.com"]
+}
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+
+docker顺序延时启动有个脚本 wait-for-it.sh 可用到docker-compose.yml中的command命令中
+
+自己构建一个mysql 启动时将create.sql传入里面 然后用docker-compose.yml联合启动mysql和我的shareinfo
+
+准备将spring_cloud注册中心/服务/消费同时用docker打包

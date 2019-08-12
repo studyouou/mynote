@@ -1,0 +1,215 @@
+1、首行指定shell语言
+#!/bin/bash
+(在使用docker时经常使用/bin/bash，相当于创建一个新的shell进程去处理，并且如果不是文件的话，需要加上-c选项，我的理解-c是相当与
+再创建一个可执行的shell脚本)
+
+2、变量
+var="ssss"
+var=$()或``赋值 如var=$(date)当前时间赋值给var;var=$(echo $PATH)把PATH值赋值给var
+函数中加了local才是局部变量，不加都是全局变量。启动一个shell相当于新启动一个shell进程。
+参数传递直接在命令或函数后面加 每加一个参数空一个空格。用$n表示参数值，如$1表示第一个参数值，当大于10时，使用${10}表示
+并且有一些特殊的值，如$0：表示当前文件；$#：表示当前参数个数；$@：表示总参数，但是可以分开用于for循环；$*：表示所有参数
+不能分开，不能用于for
+
+3、shell数组
+arra=(1 2 3 4 5 "dddd")
+arrb=(2 4 5 6 7)
+shell数组里可以不止一个类型
+数组长度 echo ${#arra[*]}
+数组拼装 arrnew=(${arra[*]} ${arrb[*]})
+删除数组和删除变量一样，数组可以只删除一个 unset arra[index]
+
+4、alias 别名，就是linux有很多别名是由命令组合起来的 如ll 是 ls -l的组合
+alias 列出所有别名   alias timestmep='date +%s'定义一个别名  unalias删除别名
+
+5、echo 输出字符串并换行 echo -n 不换行
+默认echo不会解释转义字符如 echo “sss \nmmm”就直接输出sss\nmmm，加上-e就可以解释转义字符，可以转义后就可使用\c不换行了
+如 echo -e "ssssdf\c"就不会换行了
+echo aaa>b 将aaa输入到b文件。>表示重定向。
+
+6、read命令
+read -a arr 读取数组，已回车结束，数组间用空格隔开
+read -d d name 输入字符串，不是以回车结束，是以d结束（-d m则以输入m结束）
+read -p "输入姓名、年龄、大小" name age size 是输入提示符，输入字符串以空格隔开，回车结束。
+read -n 6表示读取输入6字符串数量就退出
+read -s 不会显示输入的什么，用于输入密码
+read -t 在指定的时间内输入完成
+read -r 输入什么读什么，不会读取转义符
+
+7、数学计算命令
+1、(())可以用于数字计算，也可以用于内部逻辑运算，如echo $((4>3&&3>2))会返回1 ，若真返回1若假返回0。也可以多个表达式运行如
+((a=3+3,b=4+4)),同样的a++和++a代表和java一样。前面的先赋值再执行，后面的先执行再赋值。推荐使用这种，效率高
+2、let a=a+1 let是不能直接输出的  如 echo let a=a+1 是输出let a=a+1字符串
+
+8、shell选择结构
+if：if判断结构如下
+if condition;then
+    *****
+else
+    *****
+fi
+ifelse结构
+if condition
+then
+    *****
+elif condition
+then
+    *****
+else
+    *****
+fi
+test命令一般以if连用，test可以简写为[],if [ "${b}"=="${a}" -o "${a}"=="test" ]其中-o和 | | ，-a表示&&。[]中不能写&&和 | |只能用-o -a代替
+但是在外围可以用，如[ "aa"="aa" ] &&[ "bb"="bb" ]
+if [ ${a} -eq ${b} ] 判断数字a和b是否相等，-eq用于数字，也可以用(())来比对数字。
+if [ "${a}"=="${b}" ]判断字符串是否相等 ,这里条件最好用""，如"${a}"
+if [ -n "${a}" ] 判断字符串不为空，不为空返回true
+if [ -z "${a}"] 判断字符串为空，为空返回true
+文件类型判断
+-b filename	判断文件是否存在，并且是否为块设备文件。
+-c filename	判断文件是否存在，并且是否为字符设备文件。
+-d filename	判断文件是否存在，并且是否为目录文件。
+-e filename	判断文件是否存在。
+-f filename	判断文件是否存在，井且是否为普通文件。
+-L filename	判断文件是否存在，并且是否为符号链接文件。
+-p filename	判断文件是否存在，并且是否为管道文件。
+-s filename	判断文件是否存在，并且是否为非空。
+-S filename	判断该文件是否存在，并且是否为套接字文件。
+文件权限判断
+-r filename	判断文件是否存在，并且是否拥有读权限。
+-w filename	判断文件是否存在，并且是否拥有写权限。
+-x filename	判断文件是否存在，并且是否拥有执行权限。
+-u filename	判断文件是否存在，并且是否拥有 SUID 权限。
+-g filename	判断文件是否存在，并且是否拥有 SGID 权限。
+-k filename	判断该文件是否存在，并且是否拥有 SBIT 权限。
+2、[[]]用法
+[[]]不需要把变量名用双引号""包围起来，即使变量是空值，也不会出错。不需要、也不能对 >、< 进行转义，转义后会出错。
+[[]]中间可以使用&& ||连接符连接。但是[[]]不能写 -o -a,可以写成这样[[ -z $str1 ]] || [[ -z $str2 ]]
+并且[[]]是支持正则表达式的
+
+9、case用法
+case expression in
+    pattern1)
+        statement1
+        ;;
+    pattern2)
+        statement2
+        ;;
+    pattern3)
+        statement3
+        ;;
+    ……
+    *)
+        statementn
+esac
+其中;;相当于java的break，但是;;必须写。而*)相当于java的default，也可以不写。esac结束
+
+10 while语句 shell中，每个操作执行后都会有一个状态吗，执行正确就会返回0，执行错误就会返回1，所以判断也可以根据操作后返回值来判断
+如：
+while ! echo "ss"
+do
+    *****
+done
+这也是判断成功的
+其他的while格式如下
+while condition
+do
+    do what *****
+done
+for循环
+第一种和java差不多,但是需要两个括号
+for((;;))
+do
+    *****
+done
+第二种和python差不多,后面跟参数以空格隔开。
+for mm in $param
+do
+   echo "${mm}
+done
+还可以结合seq，可以写很多表达的 如 $(ls *.sh)相当于可以赋值一个列表的那种表达式，还有前面的参数，需要用$@不能用$*,或者直接不需要用如
+for strs
+do
+    echo "${strs}"
+done
+会自动读取参数循环
+seq例子
+for num in $(seq 2 2 100)    
+do
+    ****
+done
+seq表示从从2开始，每次加2 到100结束
+for还有一种用法
+for num in {1..10}
+do
+    *****
+done
+但是这种用法不适合有参数的如 {1..$1}这种就会报错，可以用seq代替 $(seq 1 1 $1)
+10 select in 用法如
+echo "choose a filename"
+select name in $(ls *.sh)
+do
+    echo "${name}"
+    break
+done
+select是无限死循环的，可以通过ctrl+D结束，或者加入break。但是这样就会选错，所以一般结合case使用。如
+select name in "ss" "mm" "gg"
+do
+    case ${name} in
+        "ss")
+                echo ${name}
+                break
+	;;
+         "mm")
+	echo ${name}
+	break
+	;;
+         "gg")
+	echo ${name}
+	break
+	;;
+          *)
+	echo "请输入正确的选项"
+	;;
+    esac
+done
+
+11、输出重定向
+标准输出（正确）
+command string > filename 表示将string覆盖输入到filename
+command string >> filename 表示将string输入到filename文件最后
+标准错误输出 
+command 2> filename
+command 2>> filename
+标准正确错误输出
+command >> filename 2>&1
+command > filename 2>&1  #同时输出到一个filename
+command >> filename 2>> filename2 正确输出到filename，错误输出到filename2
+command >> filename 2> filename2 正确输出到filename，错误输出到filename2
+上面覆盖和追加标准一样
+
+12、输入重定向
+command < filename 将filename文件作为command的输入
+command <<END 键盘读入数据知道END结束，同样可以其他字符，如command <<over 以over结束
+command <file1 >file2 将file1作为command的输入传入 ，command输出的定向的file2
+
+代码块重定向，将一行一行作为参数传递，如
+while read str
+do
+    ******
+done < filename
+
+13 linux的wc可以统计文件字符，字节，行数
+-m 字符数
+-l 行数
+-c 字节数
+-w 字数
+
+14 awk 命令，简单来说awk就是把文件逐行的读入，以空格为默认分隔符将每行切片，切开的部分再进行各种分析处理。
+如 awk '{print $1}' while.sh 显示每行第一个单词
+awk指定分隔符 如
+cat /etc/passwd | awk -F ':' '{print $1 "\t" $2}'
+awk 查找字段如while所在的所有行
+awk -F: '/while/' while.sh 或者 awk -F: '/while' while.sh
+awk只处理 需要的行 awk 'NR==1,NR==3${print $1}' while.sh 取出while.sh的第一行和第五行的第一格
+docker ps -a|awk 'NR!=1{print $1}' 取出前面指定除了第一行所有行的第一格
+docker rmi `docker images | awk 'NR!=1{if($1=="<none>")print $3}'`

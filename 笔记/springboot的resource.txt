@@ -1,0 +1,30 @@
+在pom文件进行profile配置
+首先指定profiles
+ <profiles>
+        <profile>
+            <id>dev</id>
+            <properties>
+                <profile.active>dev</profile.active>
+            </properties>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+        </profile>
+        <profile>
+            <id>test</id>
+            <properties>
+                <profile.active>test</profile.active>
+            </properties>
+        </profile>
+    </profiles>
+## 解释id为指定的配置id，properties的作用是在application.yml中指定spring.profiles.active指定哪个profile用的(用法@profile.active@)。
+activation的activeByDefault是在打包或运行时未指定哪个profile时默认执行当前profile。
+还需要配置resources
+resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+在配置resource时，有includs和excludes其中includes是包含那些文件(springboot中会默认包含resources根目录下所有配置文件，待确认，至少不配置是会加载的)
+但是配置了excludes的文件则不会包含经配置文件。filtering的作用就是可以在application.yml中使用占位符可以解析，就如@profile.active@。

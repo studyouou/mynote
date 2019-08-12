@@ -1,0 +1,95 @@
+1、mybatis配置加载顺序
+在 properties 元素体内指定的属性首先被读取。
+然后根据 properties 元素中的 resource 属性读取类路径下属性文件或根据 url 属性指定的路径读取属性文件，并覆盖已读取的同名属性。
+最后读取作为方法参数传递的属性，并覆盖已读取的同名属性。
+
+2、mybatis 中的settings设置（部分）
+<setting name="lazyLoadingEnabled" value="false"></setting>
+<setting name="aggressiveLazyLoading" value="true"/>
+<setting name="logImpl" value="STDOUT_LOGGING"/>
+<setting name="mapUnderscoreToCamelCase" value="true"/>
+lazyLoadingEnabled属性，开启mybatis的懒加载查询，大概是查询是一个联级查询时，mybatis是会按需查询，只有我们用到的数据才会
+查询出来，默认为false，不开启
+aggressiveLazyLoading属性，当值为true时，查询都已全部查询，一次加载出来。（实验lazyLoadingEnabled要比它优先级高）
+ogImpl 答应mybatis的查询信息等
+mapUnderscoreToCamelCase，开启字段与bean属性对应。没有开启的话，如果数据库字段和bean属性不一致，是无法赋值进去的
+
+<typeAliases>
+        <package name="org.ougen.set.model"></package>
+    </typeAliases>
+别名设置，即我们在使用时可以直接写以小写开头的类代替全类名
+    <typeHandlers>
+        <package name="org.ougen.set.handler"></package>
+    </typeHandlers>
+属性对应，即自定义的type处理器，需要继承BaseTypeHandler或实现TypeHandler。如下代码
+```
+public class MyHandler extends BaseTypeHandler<MyEnum> {
+
+    @Override
+    public void setNonNullParameter(PreparedStatement preparedStatement, int i, MyEnum myEnum, JdbcType jdbcType) throws SQLException {
+        preparedStatement.setInt(i,myEnum.getCode());
+    }
+
+    @Override
+    public MyEnum getNullableResult(ResultSet resultSet, String s) throws SQLException {
+        int em = resultSet.getInt(s);
+        return MyEnum.getFamat(em);
+    }
+
+    @Override
+    public MyEnum getNullableResult(ResultSet resultSet, int i) throws SQLException {
+        int em = resultSet.getInt(i);
+        return MyEnum.getFamat(em);
+    }
+
+    @Override
+    public MyEnum getNullableResult(CallableStatement callableStatement, int i) throws SQLException {
+        int anInt = callableStatement.getInt(i);
+        return MyEnum.getFamat(anInt);
+    }
+}
+//当你设置的查询参数为MyEnum时，会自动转化为以上逻辑。
+```
+
+mybatis分析。
+当调用mapper的方法时，调用mybatis为每个类的代理对象。并且会根据每个方法的传入生成对应的MapperMethod信息，里面包含
+了method方法是对应什么语句的信息，并且会存入缓存。接着调用execute方法。execute方法主要是根据MapperMethod方法的command.getType()
+（也就是select或insert这些方法）和result来判断执行什么什么语句。
+接着根据是我们方法中返回类型（list，map，bean）来选择怎么执行，但是查询单个和查询list最后都会使用selectList方法。以单个为列
+最后选择执行sqlSession.selectOne(command.getName(), param);其中第一个参数是xml中的id（会根据这个查询到MapperStatement），
+接下来进入执行器Excutor(默认是SimpleExecutor执行query方法）。
+进入query方法，首先获得BoundSql对象（包含我们查询语句，以及#{}里面的参数，参数和参数值会封装成ParameterMapping，并且有对应的TypeHandler），
+接着会将MapperStatement里的关于sql的语句和参数根据hash算法得到一个hash值，存入到CacheKey的list集合里面去（）。最后调用doQuery
+开始创建StatementHandler，我们所有的StatementHandler都是RoutingStatementHandler，但是RoutingStatementHandler是用来包装
+PreparedStatementHandler，CallableStatementHandler和SimpleStatementHandler的，里是有个delegate（默认是PreparedStatementHandler，）
+属性就是这个。接着就是PreparedStatementHandler执行prepare方法，返回PrepareStatement。prepare方法就是用来预编译，就是对原生的JDBC的prepareStatement功能
+做了一样的作用。防止sql注入。下一步就是parameterHandler注入参数值了。parameterHandler底层就是通过TypeHandler来进行参数值设定的
+（比如TypeHandler实现类为IntegerTypeHandler，就会调用prepareStatement的setInt方法设置参数了），最后处理的结果交给ResultSetHandler
+来处理。
+大致执行流程代码
+当执行查询方法时，代理Mapper会根据xml中配置生成MapperMethod调用sqlSession执行查询，而sqlSession则通过内部封装的Executor
+去调用StatementHandler预编译sql，并且插入参数，最后执行sql语句，statementHandler并将结果交给ResultHandler去处理返回结果。
+
+
+mybatis自定义插件分析
+mybatis的每个插件都需要继承Interceptor，并且标注注解@Intercepts，一个自定义插件大致如下
+```
+@Intercepts(@Signature(type = StatementHandler.class,method = "prepare",args = {Connection.class,Integer.class}))
+public class GetOver5Interceptor implements Interceptor {
+	@Override
+                  public Object intercept(Invocation invocation) throws Throwable {
+	}
+
+	@Override
+                 public Object plugin(Object o) {
+                      return Plugin.wrap(o,this);
+                 }
+
+                @Override
+                public void setProperties(Properties properties) {
+
+                }
+}
+
+
+

@@ -1,0 +1,105 @@
+相当于在一个环境上部署项目
+只是需要把该项目的所有的环境都要写进去，然后在build时docker才可以去下载相应的环境
+标签
+
+FROM docker所依赖的基本环境
+MAINTAINER 维护者信息
+WORKDIR /code 指定都在code目录下
+ADD 将宿主机文件添加到docker环境中 并进行解压
+COPY 将宿主机文件复制到docker下
+ENV 设置环境变量
+EXPOSE 暴露docker容器端口
+RUN 执行命令，在编译镜像时执行
+CMD 执行命令  CMD ["executable","param1","param2"]运行一个可执行文件并提供参数 
+
+RUN 命令也有2种格式
+RUN ["可执行命令","param1","param2"]
+RUN command
+在第一种里，RUN [ "echo", "$HOME" ]不会对变量进行替换$HOME，只会当成简单的字符串。如果你想要shell处理，
+那么要么使用shell表单，要么直接执行shell，例如：RUN [ "sh", "-c", "echo $HOME" ]
+第二种就可以 RUN echo ${home}
+RUN echo "sssss"; \
+	echo "mmmmm"
+等于
+RUN echo "sssss"; echo "mmmmm"
+RUN命令的构建会有默认缓存，在下一次构建时，将会调用缓存。可以在build时使用docker build --no-cache，不使用缓存
+
+CMD指令有3种形式，一个Dockerfile只能有一个CMD，多个CMD以最后一个有效，可以有多个RUN。。CMD主要作用是为Docker
+提供默认执行。
+CMD command param1 param2
+CMD ["param1","param2"，"param3"]
+CMD ["可执行命令","param1","param2"]
+第一种 直接执行命令加上参数，可以用${name}解析变量，
+第二种，是为ENTRYPOINT提供参数，必须加上一个ENTRYPOINT命令
+第三种，和第一种差不多，但是第三种不会以shell执行，所以当CMD [ "echo", "$HOME" ]中的$HOME会被当做简单的字符串，不会解析
+可以使用RUN [ "sh", "-c", "echo $HOME" ]。这种和第一种当run 没有参数时默认执行
+RUN在构建执行，CMD和ENTRYPOINT在运行时执行
+
+VOLUME
+相当于创建镜像的时候创建一个文件夹用，在启动容器的时候就可以挂在数据到这个文件夹里
+
+ONBUILD
+当前镜像不会使用执行的指令，继承他的项目会使用的指令。
+
+docker-compose.yml
+version: "3"
+services:
+  centos:
+    container_name: xxx #容器名
+    build: #如果build和image同时存在，则image作用是指定构建的镜像名以及tag
+      context: . #Dockerfile路径
+      args: #Dockerfile中的ARG
+        name: zhangxinyu
+        - name=zhangxinyu 也可以
+      labels：#Dockerfile中的标签
+        com.example.description : "*****"
+        *****.********.*************: "*****"
+    image: mycentos:1 #当和build同时存在时指定名字和tag，单独存在时作为拉去镜像的名字和tag
+    depends_on: 
+      - db
+      - redis #指定依赖关系，指的是启动顺序，和关闭顺序，但是不会保证谁先启动完成。可以靠wait-for-it.sh脚本解决或者wait-for-postgres.sh解决
+    deploy: 
+      mode: replicated(#有2种模式，global是指定为只启动一个镜像。replicated时可以启动多个容器)
+      replicas: 6
+      restart_policy: 
+        condition: on-failure
+        delay: 5s #
+        max_attempts: 3
+        window: 120s
+    dns: #8.8.8.8 #指定dns
+      - 8.8.8.8
+      - 9.9.9.9
+    env_file: common.env #指定环境变量配置文件，env文件格式都是 key=value ...和#都是注释
+      - com.env
+      - ss.env
+    environment: 
+      - key=value
+      - key2=value2
+    expose: #暴露端口
+      - 3306
+    logging:
+      driver: "json-file" #记录docker日志，还有其他驱动，默认为json-file
+      options: 
+        max-size: "200k"
+        max-file: "10"
+    restart: always #容器重启策略，always是总是，on-failure是退出代码指示报错时用的，no不重启，在集群种restart无效，应该使用restart_policy
+    tty: true #保持docker终端存活
+
+docker网络
+docker中默认是使用的桥接模式，桥接网络适用于在同一个 Docker守护程序主机上运行的容器。我们可以自定义网络
+自定义网络
+1、连接到同一用户定义的网桥的容器会自动将所有端口相互暴露，并且不会向外界显示任何端口。这使得容器化应用程序可以轻松地相互通信，而不会意外地打开对外界的访问。
+2、用户定义的桥接器在容器之间提供自动DNS解析。
+3、在容器的生命周期中，您可以动态地将其与用户定义的网络连接或断开连接。要从默认桥接网络中删除容器，您需要停止容器并使用不同的网络选项重新创建容器。
+4、每个用户定义的网络都会创建一个可配置的网桥。
+5、默认桥接网络上的链接容器共享环境变量。
+创建用户自定义桥接网络
+docker network create my-net
+删除 
+ docker network rm my-net
+连接到自定义网桥
+docker run --network mynet
+自定义网桥可以动态连接
+docker network connect my-net my-nginx
+断开连接
+docker network disconnect my-net my-nginx
