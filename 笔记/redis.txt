@@ -1,0 +1,96 @@
+redis安装
+进入解压的redis目录
+直接 make && make install
+
+五种基本类型
+1. String类型
+   1、set key value
+   2、set key value ex time nx|xx  ex设置过期 time具体时间 nx：不存在则添加，否则返回nil xx存在则修改（必须存在）
+   3、mset key value key1 value1 批量添加（好处是多条命令只用执行一次网络传输）
+   4、mget key key2 返回多个值
+   5、incr和decr 加一减一 原子操作
+      5.1、incrby|decr key increment 在指定的key增加increment数
+   6、append key value 追加值 存在则追加 不存在则添加
+   7、strlen key
+   8、getset key newvlaue 获取旧值并修改
+   9、setrange key offset value 从指定位置修改值
+   10、getrange key offset limit 获取指定角标值 含头含尾
+编码：string类型的内部编码为 int（8） embstr（<=39） raw（>39） 当为数字时为int编码，当为字符串时并且小于等于39个字节时为embstring，否则是raw，可以根据配置文件修改
+
+2、hash
+   1、hset key field value 设置值
+   2、hget key field value 获取值
+   3、hmget key field1 filed2 。。 批量获取
+   4、hmset key field1 value1 filed2 value2 批量插入 也是或有跟少的网络开销
+   5、hkeys key 获取所有field 
+   6、hvals key 获取所有value
+   7、hincrby key field increment increment代表加的数量，和字符串差不多
+   8、hexist key filed 返回为1就存在 0代表不存在
+   9、hgetall key 获取所有key的filed和value（改命令在key的field值多时可能会阻塞，获取部分可用hmget或hscan）
+   10、
+   11、hstrlen key field 获取指定field的length
+   12、hlen key 获取key长度
+编码：有2种 ziplist（<field<hash-max-ziplist-enties default 512个 或者<filedlengyh<hash-max-ziplist-value default 64 byte）该编码比较省内存
+hashtable 不满足上述条件，则会使用hashtable作为实现，但数量大时ziplist读写效率会降低，该实现读写效率较高。
+
+3、列表
+   1、lpush|rpush key value 左|右边添加元素
+   2、lange key start end 从start开始end结束从左到右获取
+   3、lpop|rpop key 从左|右弹出元素
+   4、linsert key  before|after pivot value 在pivot元素前或后添加元素
+   5、lindex key index 根据index获取元素
+   6、llen key 查看列表长度
+   7、lrem key count value 参数指定数量的value 当count<0从右删除 >0从左删除 =0删除所有
+   8、lset key index newvalue 修改指定角标的值
+   9、blpop|brpop key 阻塞弹出操作，可以用来当做队列 如lpush brpop
+编码：有2种 ziplist 同hash一样； linkedlist当无法满足时，会变为链表
+
+4、set
+   1、sadd
+   2、sismember key member member是否是key中元素
+   3、scard key 查看集合个数 
+   4、srandmember key count 随机取count个数
+   5、spop key [count] 随机弹出count个元素 默认1个
+   6、smembers key 查看所有元素
+   7、sinner key1 key2... 交集
+   8、sunion key1 key2... 并集
+   9、sdiff key1 key2.. 差集
+编码 也有两种 intset（当集合中都是整数且小于set-max-enties default 512时为该编码） 其他就是hashtable
+
+5、有序集合
+   1、zadd key score member
+其他的和set差不多
+
+6、慢查询分析
+一般我们可以设置慢查询来查询那些执行很慢的操作。其设置可以在配置文件中设置，也可以直接设置并保存
+config set slowlog-log-slower-than 1000  #对于高流量场景，1毫秒比较合适
+config set slowlog-max-len 1000          #线上环境可设置为1000以上
+config rewrite  #写入配置文件
+
+slowlog get [n] 获取多少条数据
+slowlog len 有多少条记录
+
+7、pipeline
+原生批量命令（mset等）与pipeline
+   1、原生批量命令是原子的，而pipeline不是
+   2、原生批量是一个命令对应多个key，pipeline可以对应多个命令
+   3、原生批量是redis服务端支持的，而pipeline是需要客户端和服务端共同实现
+
+8、redis事务
+redis事务开启
+multi
+
+
+exec
+可以配合watch使用，在执行事务时，如果watch的对象在其他客户端修改过，则该事务的修改则无效。事务结束后watch会自动消失。
+redis事务中要么都执行，要么都不执行，但是redis事务有限制
+当属于命令错误时，属于语法错误，那么整个redis事务会执行失败如
+multi
+set name ougen
+sett age 23 #命令错误，语法错误，会报错或者一些参数放置错误
+exec
+执行失败
+但是运行时错误时，如
+
+
+8、

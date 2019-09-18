@@ -1,0 +1,75 @@
+1.zookeeper部署（linux部署）
+    1、首先zookeeper是依赖java环境的，所以需要在linux上部署java环境
+    2、当部署好java环境时，下载zookeeper包，并且解压
+    3、改zookeeper下con下的配置文件，重名名zoo_sample.cfg改为zoo.cfg
+    4、简单单机部署，单机下可以直接在配置文件中加入server.1=ip:2888:3888，并且需要在dataDir下创建一个myid文件，内容就为cfg文件中的id一致。
+    5、集群部署，和单机差不多，只是需要在每个集群节点上的cfg文件上加入其它集群的server.id=ip:2888:3888
+    6、启动：进入bin目录。./zkServer.sh start
+    7、停止：./zkServer.sh stop
+
+
+
+2.zookeeper操作
+    1、连接客户端：./zkCli.sh -server ip:port 缺省-server就默认本机
+    2、创建节点create -s -e path data acl -s指持久 -e创建临时节点 path节点路径 data节点数据 acl节点权限控制参数（四种 "digest" "world" ""）
+    3、读取子节点 ls path  读取path下的子节点（不包括二级三级节点）
+    4、获取数据：get path [watch] 获取path下的data watch表示事件
+    5、更新数据：set path newdata [version] 更新path节点数据。
+    6、删除节点：delete path [version] 删除path节点（必须没有子节点，否则删除失败）
+
+
+
+3.java 客户端使用
+    1、导入包
+
+    2、创建连接:构造函数有几个connectionString:主机加端口，中间':'连接,sessionTimeout:会话超时时间，在该时间内没有有效的心跳检测，给会话失败；watcher:事件，在构造器中传入watcher，代表默认的事件处理器；canBeReadOnly：当在集群中一半的机器都无法使用的时候zookeeper将不再处理请求（包括读写），如果设置了这个的话，就表示zookeeper服务器可以处理读请求；sessionId和sessionPasswd:会话id和密钥，这两个参数可以代表唯一一个客户端，可以复用该会话，即在下次传入构造参数即可。
+
+    3、创建节点：create接口 6个参数，path:创建节点路径，如果存在会报错；data[] 字节，代表节点数据；acl，acl策略；createMode，节点类型，有四种，持久、持久顺序、临时、临时顺序；cb，回调函数，通过实现StringCallable重写processRueslt方法；ctx，传递一个对象，回调的时候可以使用
+        1、public void create(String path, byte[] data, List<ACL> acl, CreateMode createMode, StringCallback cb, Object ctx)不返回因为异步回调处理
+        2、 public String create(String path, byte[] data, List<ACL> acl, CreateMode createMode) 同步返回创建节点的path
+
+    4、删除节点：也分同步异步，异步需要传入VoidCallback
+        1、public void delete(String path, int version) 同步，version -1代表最新version
+	2、public void delete(String path, int version, VoidCallback cb, Object ctx) 异步
+    
+    5、读取子节点：有6个参数 path:节点路径；watcher 注册watcher，一旦在本次子节点
+    获取之后，之后子节点列表发生变更，都会通知该客户端，可以为null；watch，在连接时构造参数可能传入watcher，如果该参数为true的话，表明使用该watcher，如果为false，表示不需要watcher。所以watcher和watch参数同时只存在一个；cb异步回调函数；ctx传入回调的参数；stat，指定数据节点的节点状态信息。用法为在接口中传入一个stat变量，该stat在执行过程中，会被服务端相应的新的stat替换掉。
+	1、public List<String> getChildren(String path, boolean watch) 同步的有返回值
+	2、public List<String> getChildren(String path, Watcher watcher)
+	3、public List<String> getChildren(String path, boolean watch, Stat stat)
+	4、public List<String> getChildren(String path, Watcher watcher, Stat stat)
+	5、public void getChildren(String path, boolean watch, ChildrenCallback cb, Object ctx) 异步的都没有返回值，因为是异步的，所以都是在异步回调中获取返回值。
+	6、public void getChildren(String path, Watcher watcher, ChildrenCallback cb, Object ctx)
+	7、public void getChildren(String path, Watcher watcher, Children2Callback cb, Object ctx) Children2Callback是返回有子节点以及stat的，而ChildrenCallback没有stat 
+	8、public void getChildren(String path, boolean watch, Children2Callback cb, Object ctx)
+    
+    6、获取节点数据getData：有6个参数，path：路径；watcher，和上面一样；watch，和上面一样；stat，和上面一样；cb，回调函数；ctx，和上面一样
+	1、public byte[] getData(String path, Watcher watcher, Stat stat)同步
+	2、public byte[] getData(String path, boolean watch, Stat stat) 注意：zookeeper是没有提供序列化的，所以当需要传对象作为数据需要自己定义序列化序列化为byte数组
+	3、public void getData(String path, Watcher watcher, DataCallback cb, Object ctx)异步，和获取子节点不同的是，这几个方法都需要stat，可以为null，但必须有该参数
+	4、public void getData(String path, boolean watch, DataCallback cb, Object ctx)
+
+    7、更新数据setData：5个参数 path：路径；data[] 字节数组，要更新为什么数据；version：版本；cb，回调函数；ctx，和上面一样
+	1、 public Stat setData(String path, byte[] data, int version) 同步，返回stat
+	2、public void setData(String path, byte[] data, int version, StatCallback cb, Object ctx) 异步，有stat参数。
+
+    8、检查节点是否存在，exists 
+	1、public Stat exists(String path, Watcher watcher) 
+	2、 public Stat exists(String path, boolean watch)
+	3、public void exists(String path, Watcher watcher, StatCallback cb, Object ctx)
+	4、public void exists(String path, boolean watch, StatCallback cb, Object ctx)
+
+    9、权限控制，有2个参数，scheme代表acl的策略，五种 "world" "auth" "digest" "ip" "super"还不明白各自的意义。auth，权限信息。使用digest模式时，权限信息如"user:ougen",有点"username:password"的意思，在其他客户端中，想要操作该添加了权限信息的客户端创建的节点时，必须添加验证，也是该方法。通过实验，该权限只能对第一个节点有效，对子节点无效
+	1、 public void addAuthInfo(String scheme, byte[] auth)
+
+
+4、开源客户端，ZkClient和
+    1、ZkClient
+	1、创建连接：4个参数 zkServer代表连接参数格式：host:port  sessionTimeout，会话时间  ； connectionTimeout该时间内连接不上zookeeper就放弃连接，抛异常 ； connection，IZKConnection的实现类 ； zkSerializer 自定义序列化。
+	2、创建节点：7个参数 path：创建节点路径；data，传入数据；mode，节点类型；acl，acl策略；callback，注册一个异步回调函数；context，传递对象引用；createParents，创建的节点如果含有不存在的父节点，是否创建。还有一些方法如createEphemeral，创建临时节点等
+	3、删除节点：3个参数 path 删除节点路径；callback异步回调函数；context，传输内容；有一个deleteRecursive方法可以删除含有叶子节点的节点。
+	4、读取子节点，就一个方法 getChildren ，一个path参数。对读取子节点的监听，可以使用List<String> subscribeChildChanges(String path,IZkChildListener listener)完成对子节点的监听的，并且和原生不同的是，他是一次监听，终生有效。
+	5、获取节点数据：readData需要注意的就一个参数returnNullIfPathNotExists，如果为true，则当该节点不存在时，不抛出异常，而是返回null。对该node的数据的监听，是通过添加IzkDataListener来实现的，通过zkClient.suvscrubeDataChanges(IZkDataListener listener)实现，也是终生有效。
+	6、更新数据 writeData
+
+    2、Curator
