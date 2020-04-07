@@ -1,0 +1,17 @@
+int 装入byte数组序列化以及反序列话问题
+int 转化为byte数组 
+public static void intToByte(int i,byte[] bytes,int offset){
+        bytes[offset] = (byte)(i>>24 & 0xFF);
+        bytes[offset+1] = (byte)(i>>16 & 0xFF);
+        bytes[offset+2] = (byte)(i>>8 & 0xFF);
+        bytes[offset+3] = (byte)(i&0xFF);
+    }
+
+byte数组转化为int类型
+ int ret = 0;
+        for (int i = 0; i < 4 && i + offset < bytes.length; i++) {
+            ret <<= 8;
+            ret |= (int)bytes[i + offset] & 0xFF; //关于这里为什么会 & 0xff，是因为当byte数组中一个为负数时（如10111111，其实只是代表int某个字节数）
+				//这样 byte转化为int类型时最高位为1了，所以| 操作符会时负数，导致int类型转换失败
+        }
+        return ret;
